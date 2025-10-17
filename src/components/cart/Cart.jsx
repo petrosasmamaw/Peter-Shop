@@ -1,5 +1,6 @@
 // src/components/cart/Cart.jsx
 import React from "react";
+import SendOrder from "./SendOrder";
 import { useSelector, useDispatch } from "react-redux";
 import {
   selectCartItems,
@@ -8,6 +9,7 @@ import {
   decreaseQuantity,
   clearCart,
 } from "./cartSlice";
+import { Link } from "react-router-dom";
 
 const Cart = ({ user }) => {
   const items = useSelector(selectCartItems);
@@ -27,7 +29,7 @@ const Cart = ({ user }) => {
           <ul>
             {items.map((item) => (
               <li key={item.id}>
-                <strong>{item.title}</strong> — ${item.price} × {item.quantity} =
+                <Link to={`/products/${item.id}`}>{item.title}</Link> - ${item.price} x {item.quantity} =
                 <b> ${item.subtotal.toFixed(2)}</b>
                 <br />
                 <button onClick={() => dispatch(decreaseQuantity(item.id))}>-</button>
@@ -39,7 +41,9 @@ const Cart = ({ user }) => {
           <h3>Total: ${totalPrice.toFixed(2)}</h3>
 
           <button onClick={() => dispatch(clearCart())}>Clear Cart</button>
+           <SendOrder items={items} totalPrice={totalPrice} />
         </>
+        
       )}
     </div>
   );
