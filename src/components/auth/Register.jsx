@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabase/supabaseClient';
+import { useNavigate } from 'react-router-dom';
 
 const Register = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const navigate = useNavigate();
 
   const handleRegister = async () => {
     const { data, error } = await supabase.auth.signUp({ email, password });
     if (error) alert(error.message);
     else alert('Check your email to confirm registration');
+    if (data) navigate('/login');
   };
 
   return (
