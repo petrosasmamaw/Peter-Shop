@@ -1,61 +1,79 @@
+// src/components/cart/SendOrder.jsx
 import React, { useState } from "react";
+import emailjs from "emailjs-com";
+import { useDispatch } from "react-redux";
+import { clearCart } from "./cartSlice";
 
-const SendOrder = ({ items, totalPrice }) => {
-  const [status, setStatus] = useState("");
+const SendOrder = ({ user, cartItems, totalPrice }) => {
+  const [isSending, setIsSending] = useState(false);
+  const dispatch = useDispatch();
 
-  const handleSendOrder = async (e) => {
-    e.preventDefault();
-    setStatus("Sending order...");
+  const handleSendOrder = async () => {
+    if (!user || !user.email) {
+      alert("Please log in first!");
+      return;
+    }
 
-    // Prepare order details as text
-    const orderDetails = items
-      .map(
-        (item, index) =>
-          `${index + 1}. ${item.title} — $${item.price} × ${item.quantity} = $${item.subtotal.toFixed(2)}`
-      )
+    if (!cartItems || cartItems.length === 0) {
+      alert("Your cart is empty!");
+      return;
+    }
+
+    setIsSending(true);
+
+    const orderSummary = cartItems
+      .map((item) => `${item.title} (x${item.quantity}) - $${item.price}`)
       .join("\n");
 
-    const message = `
-🛍️ New Order Received
--------------------------
-${orderDetails}
-
-Total: $${totalPrice.toFixed(2)}
--------------------------
-Thank you!
-`;
-
-    const formData = new FormData();
-    formData.append("access_key", "ec9594a0-ecd1-43ae-a8c3-c0451db084a5");
-    formData.append("subject", "🛒 New Order from Your Shopping App");
-    formData.append("from_name", "Shopping App");
-    formData.append("message", message);
+    const orderDate = new Date().toLocaleString();
 
     try {
-      const response = await fetch("https://api.web3forms.com/submit", {
-        method: "POST",
-        body: formData,
-      });
-      const data = await response.json();
+      // 1️⃣ Send invoice to customer
+      await emailjs.send(
+        "service_f9p0p7b",
+        "template_5xv3bke",
+        {
+          to_name: user.name || user.email,
+          to_email: user.email,
+          order_summary: orderSummary,
+          total_price: totalPrice.toFixed(2),
+          order_date: orderDate,
+        },
+        "BeGy3nai4D3iywEnN"
+      );
 
-      if (data.success) {
-        setStatus("✅ Order sent successfully!");
-      } else {
-        setStatus("❌ Failed to send order. Try again.");
-      }
+      // 2️⃣ Send notification to admin
+      await emailjs.send(
+        "service_f9p0p7b",
+        "template_dsaauta",
+        {
+          customer_email: user.email,
+          order_summary: orderSummary,
+          total_price: totalPrice.toFixed(2),
+        },
+        "BeGy3nai4D3iywEnN"
+      );
+
+      alert("Invoice sent to customer and admin notified!");
+      dispatch(clearCart()); // ✅ Clear cart after sending
     } catch (error) {
-      console.error("Error sending order:", error);
-      setStatus("⚠️ Network error. Try again.");
+      console.error("EmailJS error:", error);
+      alert("Failed to send order emails. Check console for details.");
+    } finally {
+      setIsSending(false);
     }
   };
 
   return (
-    <div style={{ marginTop: "20px" }}>
-      <button onClick={handleSendOrder} className="btn dark-btn">
-        Send Order
-      </button>
-      {status && <p style={{ marginTop: "10px" }}>{status}</p>}
-    </div>
+    <button
+      onClick={handleSendOrder}
+      disabled={isSending}
+      className={`px-4 py-2 rounded-lg text-white ${
+        isSending ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
+      }`}
+    >
+      {isSending ? "Sending..." : "Send Order"}
+    </button>
   );
 };
 

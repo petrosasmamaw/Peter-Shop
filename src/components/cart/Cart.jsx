@@ -41,7 +41,8 @@ const Cart = ({ user }) => {
           <h3>Total: ${totalPrice.toFixed(2)}</h3>
 
           <button onClick={() => dispatch(clearCart())}>Clear Cart</button>
-           <SendOrder items={items} totalPrice={totalPrice} />
+          <SendOrder user={user} cartItems={items} totalPrice={totalPrice} />
+
         </>
         
       )}

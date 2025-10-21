@@ -33,10 +33,6 @@ const ProductsDetail = ({ user, cartItems }) => {
     if (user) await syncCartToSupabase(user.id, cartItems);
   };
 
-  const handleDecrease = async () => {
-    dispatch(decreaseQuantity(product.id));
-    if (user) await syncCartToSupabase(user.id, cartItems);
-  };
 
   if (productStatus === "loading") return <p>Loading...</p>;
   if (productError) return <p>Error: {productError}</p>;
