@@ -3,13 +3,14 @@ import React, { useState } from "react";
 import emailjs from "emailjs-com";
 import { useDispatch } from "react-redux";
 import { clearCart } from "./cartSlice";
+import { supabase } from "../supabase/supabaseClient";
 
 const SendOrder = ({ user, cartItems, totalPrice }) => {
   const [isSending, setIsSending] = useState(false);
   const dispatch = useDispatch();
 
   const handleSendOrder = async () => {
-    if (!user || !user.email) {
+    if (!user || !user.id || !user.email) {
       alert("Please log in first!");
       return;
     }
@@ -21,11 +22,15 @@ const SendOrder = ({ user, cartItems, totalPrice }) => {
 
     setIsSending(true);
 
+    // Create order summary string for email
     const orderSummary = cartItems
       .map((item) => `${item.title} (x${item.quantity}) - $${item.price}`)
       .join("\n");
 
-    const orderDate = new Date().toLocaleString();
+    // Create an array of item names for database
+    const itemNames = cartItems.map(item => item.title);
+
+    const orderDate = new Date().toISOString();
 
     try {
       // 1️⃣ Send invoice to customer
@@ -37,7 +42,7 @@ const SendOrder = ({ user, cartItems, totalPrice }) => {
           to_email: user.email,
           order_summary: orderSummary,
           total_price: totalPrice.toFixed(2),
-          order_date: orderDate,
+          order_date: new Date().toLocaleString(),
         },
         "BeGy3nai4D3iywEnN"
       );
@@ -54,11 +59,29 @@ const SendOrder = ({ user, cartItems, totalPrice }) => {
         "BeGy3nai4D3iywEnN"
       );
 
-      alert("Invoice sent to customer and admin notified!");
-      dispatch(clearCart()); // ✅ Clear cart after sending
+      // 3️⃣ Save order to Supabase
+      const { error } = await supabase.from("orders").insert([
+        {
+          user_id: user.id,
+          user_email: user.email,
+          cart_data: cartItems,
+          item_names: itemNames,        // store item names
+          total_price: totalPrice,
+          order_date: orderDate,
+          status: "pending",
+        },
+      ]);
+
+      if (error) {
+        console.error("Supabase insert error:", error);
+        alert("Failed to save order to database!");
+      } else {
+        alert("✅ Invoice sent & order saved!");
+        dispatch(clearCart());
+      }
     } catch (error) {
-      console.error("EmailJS error:", error);
-      alert("Failed to send order emails. Check console for details.");
+      console.error("SendOrder error:", error);
+      alert("Failed to send order or save to database");
     } finally {
       setIsSending(false);
     }
